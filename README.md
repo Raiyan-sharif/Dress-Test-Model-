@@ -366,3 +366,17 @@ This project follows the specifications from PETRA_INQ.xlsm for professional dre
 ---
 
 **Ready to generate professional dress measurements!** 🎨📏
+
+---
+
+## 📝 Signature
+
+**PETRA Dress Measurement System**  
+*Professional Technical Drawing Generator*
+
+**Developed by:** Raiyan Sharif  
+**Date:** October 2024  
+**Version:** 2.0 (Simplified OpenCV Edition)  
+**Specification:** PETRA_INQ.xlsm Compliance  
+
+*This system generates professional technical drawings with precise measurements following industry standards for dress pattern making and garment construction.*

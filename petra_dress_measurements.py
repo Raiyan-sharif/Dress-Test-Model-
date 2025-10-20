@@ -217,6 +217,26 @@ class PetraDressMeasurements:
             self.draw_measurement_line(annotated_image, snapped_point1, snapped_point2, 
                                      measurement_id, cm_distance)
         
+        # Add title at the top
+        title = "PETRA DRESS - TECHNICAL MEASUREMENTS"
+        cv2.putText(annotated_image, title, (50, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
+        
+        # Add signature at bottom right
+        signature_lines = [
+            "PETRA Dress Measurement System",
+            "Developed by: Raiyan Sharif",
+            "Version 2.0 - October 2024"
+        ]
+        
+        # Calculate signature position (bottom right with padding)
+        signature_x = width - 300
+        signature_y = height - 80
+        
+        for i, line in enumerate(signature_lines):
+            y_pos = signature_y + (i * 20)
+            cv2.putText(annotated_image, line, (signature_x, y_pos), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 100, 100), 1, cv2.LINE_AA)
+        
         self.measurements = calculated_measurements
         return annotated_image, calculated_measurements
     
@@ -295,3 +315,17 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
+
+# =============================================================================
+# PETRA Dress Measurement System
+# Professional Technical Drawing Generator
+# 
+# Developed by: Raiyan Sharif
+# Date: October 2024
+# Version: 2.0 (Simplified OpenCV Edition)
+# Specification: PETRA_INQ.xlsm Compliance
+# 
+# This system generates professional technical drawings with precise 
+# measurements following industry standards for dress pattern making 
+# and garment construction.
+# =============================================================================

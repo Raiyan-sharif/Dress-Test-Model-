@@ -258,6 +258,22 @@ for measurement_id, (point1, point2) in measurement_points.items():
 title = "PETRA DRESS - TECHNICAL MEASUREMENTS"
 cv2.putText(annotated, title, (50, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
 
+# --- Add signature at bottom right ---
+signature_lines = [
+    "PETRA Dress Measurement System",
+    "Developed by: Raiyan Sharif",
+    "Version 2.0 - October 2024"
+]
+
+# Calculate signature position (bottom right with padding)
+signature_x = width - 300
+signature_y = height - 80
+
+for i, line in enumerate(signature_lines):
+    y_pos = signature_y + (i * 20)
+    cv2.putText(annotated, line, (signature_x, y_pos), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 100, 100), 1, cv2.LINE_AA)
+
 # --- Determine dress size ---
 determined_size, error = determine_dress_size(calculated_measurements)
 
