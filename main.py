@@ -319,3 +319,17 @@ print(f"\n🎯 Professional dress measurement system complete!")
 print(f"📁 Output files:")
 print(f"   - annotated_dress.png (Professional technical drawing)")
 print(f"   - measurement_report.json (Complete measurement data)")
+
+# =============================================================================
+# PETRA Dress Measurement System
+# Professional Technical Drawing Generator
+# 
+# Developed by: Raiyan Sharif
+# Date: October 2024
+# Version: 2.0 (Simplified OpenCV Edition)
+# Specification: PETRA_INQ.xlsm Compliance
+# 
+# This system generates professional technical drawings with precise 
+# measurements following industry standards for dress pattern making 
+# and garment construction.
+# =============================================================================
