@@ -1,0 +1,82 @@
+{
+  "item_info": {
+    "item_name": "PETRA",
+    "pattern_no": "J8518-1",
+    "pattern_maker": "perbra",
+    "measurement_date": "2025-10-19 21:14:03",
+    "determined_size": "56",
+    "measurement_error": 111.37367518436999
+  },
+  "measurements": {
+    "A": {
+      "description": "\u00bd CHEST",
+      "measured_value": 26.52,
+      "unit": "cm"
+    },
+    "B": {
+      "description": "\u00bd BOTTOM",
+      "measured_value": 28.96,
+      "unit": "cm"
+    },
+    "C": {
+      "description": "ARMHOLE DEPTH fr HPS",
+      "measured_value": 0.0,
+      "unit": "cm"
+    },
+    "D": {
+      "description": "TO SKIRT AT SIDE",
+      "measured_value": 13.2,
+      "unit": "cm"
+    },
+    "E": {
+      "description": "BACK LENGTH fr HPS",
+      "measured_value": 39.75,
+      "unit": "cm"
+    },
+    "F": {
+      "description": "SHOULDER TO SHOULDER",
+      "measured_value": 31.84,
+      "unit": "cm"
+    },
+    "G": {
+      "description": "SLANTING SHOULDER",
+      "measured_value": 6.53,
+      "unit": "cm"
+    },
+    "H": {
+      "description": "SLEEVE LENGTH",
+      "measured_value": 20.89,
+      "unit": "cm"
+    },
+    "I": {
+      "description": "BICEPS",
+      "measured_value": 8.72,
+      "unit": "cm"
+    },
+    "J": {
+      "description": "BOTTOM SLEEVE",
+      "measured_value": 2.58,
+      "unit": "cm"
+    },
+    "K": {
+      "description": "NECKWIDTH",
+      "measured_value": 9.38,
+      "unit": "cm"
+    },
+    "L": {
+      "description": "NECKDROP CF fr HPS",
+      "measured_value": 0.07,
+      "unit": "cm"
+    },
+    "M": {
+      "description": "NECKDROP CB fr HPS",
+      "measured_value": 0.07,
+      "unit": "cm"
+    },
+    "N": {
+      "description": "Min NECKLINE extended",
+      "measured_value": 21.73,
+      "unit": "cm"
+    }
+  }
+}
