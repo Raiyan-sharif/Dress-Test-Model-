@@ -1,12 +1,20 @@
 import cv2
+import torch
 import numpy as np
 import json
 from datetime import datetime
+try:
+    from detectron2.engine import DefaultPredictor
+    from detectron2.config import get_cfg
+    from detectron2.model_zoo import model_zoo
+    from detectron2.data import MetadataCatalog
+except ImportError as e:
+    raise ImportError("detectron2 is not installed. Please install it using 'pip install detectron2' or follow the setup instructions from https://github.com/facebookresearch/detectron2/blob/main/INSTALL.md") from e
 
 class PetraDressMeasurements:
     """PETRA Dress Measurement System following PETRA_INQ.xlsm specifications"""
     
-    def __init__(self, image_path="dress_wire.jpeg"):
+    def __init__(self, image_path="dress_wire3.jpeg"):
         self.image_path = image_path
         self.image = None
         self.contour = None
@@ -38,7 +46,7 @@ class PetraDressMeasurements:
         }
         
     def load_and_process_image(self):
-        """Load image and detect dress contour using simple edge detection (better for line drawings)"""
+        """Load image and detect dress contour using detectron2"""
         print("Loading and processing image...")
         
         # Load image
@@ -46,22 +54,51 @@ class PetraDressMeasurements:
         if self.image is None:
             raise FileNotFoundError(f"Image not found: {self.image_path}")
         
-        gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        orig = self.image.copy()
+        image_rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         
-        # Threshold to get binary image (invert for black lines on white)
-        _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+        # Load Mask R-CNN model
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.1
+        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
         
-        # Find contours
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        predictor = DefaultPredictor(cfg)
+        outputs = predictor(image_rgb)
+        
+        # Extract masks
+        instances = outputs["instances"].to("cpu")
+        masks = instances.pred_masks.numpy()
+        
+        print(f"Number of instances detected: {len(masks)}")
+        if len(masks) > 0:
+            scores = instances.scores.numpy()
+            classes = instances.pred_classes.numpy()
+            metadata = MetadataCatalog.get("coco_2017_val")
+            class_names = metadata.thing_classes
+            print("Detected objects:")
+            for i, (score, class_id) in enumerate(zip(scores, classes)):
+                print(f"  {i+1}. {class_names[class_id]} (confidence: {score:.3f})")
+        
+        if len(masks) == 0:
+            raise ValueError("No instances detected in the image.")
+        
+        # Combine masks and find contour
+        combined_mask = np.zeros((image_rgb.shape[0], image_rgb.shape[1]), dtype=np.uint8)
+        for mask in masks:
+            combined_mask = cv2.bitwise_or(combined_mask, mask.astype(np.uint8) * 255)
+        
+        contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         if contours:
             self.contour = max(contours, key=cv2.contourArea)
             self.contour = self.contour.squeeze()
             print(f"Found contour with {len(self.contour)} points")
         else:
-            raise ValueError("No contours found in the image.")
+            raise ValueError("No contours found in the mask.")
         
-        return self.image.copy()
+        return orig
     
     def find_closest_point_index(self, contour, point):
         """Find the closest point on contour to given point"""
@@ -69,9 +106,29 @@ class PetraDressMeasurements:
         dists = np.sum((contour - point) ** 2, axis=1)
         return np.argmin(dists)
     
-    def calculate_measurement(self, point1, point2):
-        """Calculate linear measurement between two points"""
-        return np.linalg.norm(np.array(point1) - np.array(point2))
+    def calculate_arc_length(self, segment):
+        """Calculate arc length of a contour segment"""
+        if len(segment) < 2:
+            return 0.0
+        diffs = np.diff(segment, axis=0)
+        return np.sum(np.sqrt(np.sum(diffs ** 2, axis=1)))
+    
+    def calculate_measurement(self, point1, point2, measurement_type="linear"):
+        """Calculate measurement between two points"""
+        if measurement_type == "linear":
+            return np.linalg.norm(np.array(point1) - np.array(point2))
+        elif measurement_type == "arc":
+            # For arc measurements along the contour
+            i1 = self.find_closest_point_index(self.contour, point1)
+            i2 = self.find_closest_point_index(self.contour, point2)
+            i_min, i_max = min(i1, i2), max(i1, i2)
+            
+            segment1 = self.contour[i_min:i_max + 1]
+            len1 = self.calculate_arc_length(segment1)
+            segment2 = np.vstack((self.contour[i_max:], self.contour[:i_min + 1]))
+            len2 = self.calculate_arc_length(segment2)
+            
+            return min(len1, len2)  # Return shorter path
     
     def determine_dress_size(self, measurements):
         """Determine the closest dress size based on measurements"""
@@ -83,6 +140,8 @@ class PetraDressMeasurements:
             for measurement_id, measured_value in measurements.items():
                 if measurement_id in standards:
                     standard_value = standards[measurement_id]
+                    # Convert to same units (assuming measurements are in pixels, convert to cm)
+                    # This is a rough conversion - in practice you'd need proper calibration
                     error = abs(measured_value - standard_value)
                     total_error += error
             
@@ -92,77 +151,23 @@ class PetraDressMeasurements:
         
         return best_size, min_error
     
-    def draw_professional_measurement_line(self, img, point1, point2, label, 
-                                           color=(0, 0, 0), thickness=2, offset=25):
-        """Draw professional measurement line with inward arrows and proper styling"""
+    def draw_measurement_line(self, img, point1, point2, label, measurement_value, color=(255, 0, 0), thickness=2):
+        """Draw measurement line with label and value"""
+        # Draw line
+        cv2.line(img, point1, point2, color, thickness)
         
-        # Calculate line properties
-        dx = point2[0] - point1[0]
-        dy = point2[1] - point1[1]
-        length = np.sqrt(dx*dx + dy*dy)
+        # Calculate midpoint for label
+        mid_x = (point1[0] + point2[0]) // 2
+        mid_y = (point1[1] + point2[1]) // 2
         
-        if length == 0:
-            return
+        # Draw label with measurement value
+        label_text = f"{label}: {measurement_value:.1f}cm"
+        cv2.putText(img, label_text, (mid_x, mid_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(img, label_text, (mid_x, mid_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
         
-        # Normalize direction vector
-        dx_norm = dx / length
-        dy_norm = dy / length
-        
-        # Calculate perpendicular offset for measurement line (flip sign if needed for better placement)
-        perp_x = -dy_norm * offset
-        perp_y = dx_norm * offset
-        
-        # Offset points for measurement line
-        offset_p1 = (int(point1[0] + perp_x), int(point1[1] + perp_y))
-        offset_p2 = (int(point2[0] + perp_x), int(point2[1] + perp_y))
-        
-        # Draw main measurement line
-        cv2.line(img, offset_p1, offset_p2, color, thickness)
-        
-        # Draw extension lines (from object to measurement line)
-        cv2.line(img, point1, offset_p1, color, 1)
-        cv2.line(img, point2, offset_p2, color, 1)
-        
-        # Draw inward arrows
-        arrow_length = 12
-        arrow_angle = 0.3
-        
-        # Arrow 1 (inward)
-        arrow1_end = (int(offset_p1[0] + dx_norm * arrow_length), 
-                      int(offset_p1[1] + dy_norm * arrow_length))
-        cv2.arrowedLine(img, offset_p1, arrow1_end, color, thickness, tipLength=arrow_angle)
-        
-        # Arrow 2 (inward)
-        arrow2_end = (int(offset_p2[0] - dx_norm * arrow_length), 
-                      int(offset_p2[1] - dy_norm * arrow_length))
-        cv2.arrowedLine(img, offset_p2, arrow2_end, color, thickness, tipLength=arrow_angle)
-        
-        # Draw measurement label (letter only)
-        mid_x = (offset_p1[0] + offset_p2[0]) // 2
-        mid_y = (offset_p1[1] + offset_p2[1]) // 2
-        
-        label_text = f"{label}"
-        
-        # Get text size for background
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.8
-        font_thickness = 2
-        
-        (label_w, label_h), _ = cv2.getTextSize(label_text, font, font_scale, font_thickness)
-        
-        # Draw white background for text
-        padding = 8
-        bg_x1 = mid_x - label_w // 2 - padding
-        bg_y1 = mid_y - label_h // 2 - padding
-        bg_x2 = mid_x + label_w // 2 + padding
-        bg_y2 = mid_y + label_h // 2 + padding
-        
-        cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), (255, 255, 255), -1)
-        cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), color, 1)
-        
-        # Draw text
-        cv2.putText(img, label_text, (mid_x - label_w // 2, mid_y + label_h // 2), 
-                    font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # Draw measurement points
+        cv2.circle(img, point1, 5, color, -1)
+        cv2.circle(img, point2, 5, color, -1)
     
     def calculate_petra_measurements(self):
         """Calculate all PETRA measurements according to specifications"""
@@ -171,13 +176,8 @@ class PetraDressMeasurements:
         
         height, width = self.image.shape[:2]
         
-        # Create clean white background for professional output
-        annotated = np.ones((height, width, 3), dtype=np.uint8) * 255
-        
-        # Draw dress contour in black
-        cv2.drawContours(annotated, [self.contour.reshape(-1, 1, 2)], -1, (0, 0, 0), 2)
-        
-        # Define measurement points based on dress proportions (adjust as needed for accuracy)
+        # Define measurement points based on dress proportions
+        # These are approximate positions that would need to be refined based on actual dress detection
         measurement_points = {
             'A': ((int(width * 0.3), int(height * 0.4)), (int(width * 0.7), int(height * 0.4))),  # ½ CHEST
             'B': ((int(width * 0.2), int(height * 0.9)), (int(width * 0.8), int(height * 0.9))),  # ½ BOTTOM
@@ -197,6 +197,7 @@ class PetraDressMeasurements:
         
         # Snap points to contour and calculate measurements
         calculated_measurements = {}
+        annotated_image = self.image.copy()
         
         for measurement_id, (point1, point2) in measurement_points.items():
             # Snap to contour
@@ -205,21 +206,19 @@ class PetraDressMeasurements:
             snapped_point1 = tuple(self.contour[idx1])
             snapped_point2 = tuple(self.contour[idx2])
             
-            # Calculate measurement (convert pixels to cm - rough approximation assuming ~50cm dress width)
+            # Calculate measurement (convert pixels to cm - rough approximation)
             pixel_distance = self.calculate_measurement(snapped_point1, snapped_point2)
+            # Rough conversion: assuming image represents a dress of ~50cm width
             cm_distance = (pixel_distance / width) * 50
             
             calculated_measurements[measurement_id] = cm_distance
             
-            # Draw professional measurement line
-            self.draw_professional_measurement_line(annotated, snapped_point1, snapped_point2, measurement_id)
-        
-        # Add title
-        title = "PETRA DRESS - TECHNICAL MEASUREMENTS"
-        cv2.putText(annotated, title, (50, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
+            # Draw measurement line
+            self.draw_measurement_line(annotated_image, snapped_point1, snapped_point2, 
+                                     measurement_id, cm_distance)
         
         self.measurements = calculated_measurements
-        return annotated, calculated_measurements
+        return annotated_image, calculated_measurements
     
     def generate_measurement_report(self):
         """Generate a professional measurement report"""
@@ -254,13 +253,13 @@ class PetraDressMeasurements:
     def save_results(self, annotated_image, report):
         """Save annotated image and measurement report"""
         # Save annotated image
-        cv2.imwrite("annotated_dress.png", annotated_image)
-        print("✅ Professional annotated image saved as 'annotated_dress.png'")
+        cv2.imwrite("petra_annotated_dress.png", annotated_image)
+        print("✅ Annotated image saved as 'petra_annotated_dress.png'")
         
         # Save measurement report
-        with open("measurement_report.json", "w") as f:
+        with open("petra_measurement_report.json", "w") as f:
             json.dump(report, f, indent=2)
-        print("✅ Measurement report saved as 'measurement_report.json'")
+        print("✅ Measurement report saved as 'petra_measurement_report.json'")
         
         # Print summary
         print(f"\n=== PETRA DRESS MEASUREMENT SUMMARY ===")

@@ -43,7 +43,7 @@ PETRA_MEASUREMENT_DESCRIPTIONS = {
 
 # --- Load image ---
 print("Loading and processing dress image...")
-image = cv2.imread("dress_wire.jpeg")
+image = cv2.imread("dress_wire2.jpeg")
 if image is None:
     raise FileNotFoundError("Image not found. Make sure 'dress_wire.jpeg' is in the folder.")
 orig = image.copy()
