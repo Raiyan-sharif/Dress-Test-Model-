@@ -3,19 +3,19 @@
     "item_name": "PETRA",
     "pattern_no": "J8518-1",
     "pattern_maker": "perbra",
-    "measurement_date": "2025-10-20 11:13:27",
+    "measurement_date": "2025-10-20 12:56:45",
     "determined_size": "56",
-    "measurement_error": 111.37367518436999
+    "measurement_error": 105.89742704530973
   },
   "measurements": {
     "A": {
       "description": "\u00bd CHEST",
-      "measured_value": 26.52,
+      "measured_value": 23.0,
       "unit": "cm"
     },
     "B": {
       "description": "\u00bd BOTTOM",
-      "measured_value": 28.96,
+      "measured_value": 30.62,
       "unit": "cm"
     },
     "C": {
@@ -25,42 +25,42 @@
     },
     "D": {
       "description": "TO SKIRT AT SIDE",
-      "measured_value": 13.2,
+      "measured_value": 14.13,
       "unit": "cm"
     },
     "E": {
       "description": "BACK LENGTH fr HPS",
-      "measured_value": 39.75,
+      "measured_value": 38.87,
       "unit": "cm"
     },
     "F": {
       "description": "SHOULDER TO SHOULDER",
-      "measured_value": 31.84,
+      "measured_value": 31.74,
       "unit": "cm"
     },
     "G": {
       "description": "SLANTING SHOULDER",
-      "measured_value": 6.53,
+      "measured_value": 4.83,
       "unit": "cm"
     },
     "H": {
       "description": "SLEEVE LENGTH",
-      "measured_value": 20.89,
+      "measured_value": 20.63,
       "unit": "cm"
     },
     "I": {
       "description": "BICEPS",
-      "measured_value": 8.72,
+      "measured_value": 8.54,
       "unit": "cm"
     },
     "J": {
       "description": "BOTTOM SLEEVE",
-      "measured_value": 2.58,
+      "measured_value": 2.19,
       "unit": "cm"
     },
     "K": {
       "description": "NECKWIDTH",
-      "measured_value": 9.38,
+      "measured_value": 8.79,
       "unit": "cm"
     },
     "L": {
@@ -75,7 +75,7 @@
     },
     "N": {
       "description": "Min NECKLINE extended",
-      "measured_value": 21.73,
+      "measured_value": 21.34,
       "unit": "cm"
     }
   }

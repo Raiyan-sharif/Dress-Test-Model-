@@ -182,9 +182,8 @@ def draw_professional_measurement_line(img, point1, point2, label, measurement_v
     mid_x = (offset_p1[0] + offset_p2[0]) // 2
     mid_y = (offset_p1[1] + offset_p2[1]) // 2
     
-    # Create label text
+    # Create label text only (no values)
     label_text = f"{label}"
-    value_text = f"{measurement_value:.1f}cm"
     
     # Get text size for background
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -192,22 +191,19 @@ def draw_professional_measurement_line(img, point1, point2, label, measurement_v
     font_thickness = 2
     
     (label_w, label_h), _ = cv2.getTextSize(label_text, font, font_scale, font_thickness)
-    (value_w, value_h), _ = cv2.getTextSize(value_text, font, font_scale, font_thickness)
     
     # Draw white background for text
     padding = 8
-    bg_x1 = mid_x - max(label_w, value_w) // 2 - padding
-    bg_y1 = mid_y - label_h - value_h - padding
-    bg_x2 = mid_x + max(label_w, value_w) // 2 + padding
-    bg_y2 = mid_y + padding
+    bg_x1 = mid_x - label_w // 2 - padding
+    bg_y1 = mid_y - label_h // 2 - padding
+    bg_x2 = mid_x + label_w // 2 + padding
+    bg_y2 = mid_y + label_h // 2 + padding
     
     cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), (255, 255, 255), -1)
     cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), color, 1)
     
     # Draw text
-    cv2.putText(img, label_text, (mid_x - label_w // 2, mid_y - value_h - 2), 
-               font, font_scale, color, font_thickness, cv2.LINE_AA)
-    cv2.putText(img, value_text, (mid_x - value_w // 2, mid_y), 
+    cv2.putText(img, label_text, (mid_x - label_w // 2, mid_y + label_h // 2), 
                font, font_scale, color, font_thickness, cv2.LINE_AA)
 
 # --- Calculate PETRA Measurements ---
